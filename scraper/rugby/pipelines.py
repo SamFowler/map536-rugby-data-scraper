@@ -9,6 +9,8 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.engine.url import URL
 
+from scrapy.exporters import CsvItemExporter
+
 from rugby import models, items, settings
 
 class RugbyScraperPipeline(object):
@@ -82,3 +84,45 @@ class RugbyScraperPipeline(object):
         else:
             session.query(model).filter_by(**filters).update(item)
             self.logger.info("Updating \"{}\" item.".format(item.__class__.__name__))
+
+
+
+
+class RpiScraperCSVPipeline(object):
+
+    #def __init__(self):
+        #self.file = open("data.csv", 'wb')
+        #self.exporter = CsvItemExporter(self.file)
+        #self.exporter.start_exporting()
+
+    def open_spider(self, spider):
+        self.itemtype_to_exporter = {}
+        self.files = {}
+
+    def close_spider(self, spider):
+        print((self.files))
+        print(self.itemtype_to_exporter.keys())
+        for exporter in self.itemtype_to_exporter.values():
+            exporter.finish_exporting()
+        for file in self.files.values():
+            print('file closed')
+            file.close()
+            
+
+    def _exporter_for_item(self, item):
+        item_type = type(item).__name__
+        if item_type not in self.itemtype_to_exporter:
+            f = open(f"{item_type}.csv", 'wb')
+            exporter = CsvItemExporter(f)
+            exporter.start_exporting()
+            self.itemtype_to_exporter[item_type] = exporter
+            self.files[item_type] = f
+        return self.itemtype_to_exporter[item_type]
+
+    def process_item(self, item, spider):
+
+        exporter = self._exporter_for_item(item)
+        exporter.export_item(item)
+
+        return item
+

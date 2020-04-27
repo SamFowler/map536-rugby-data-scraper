@@ -123,3 +123,19 @@ class GameEvent(Item):
     time = Field()
     action_type = Field()
     extra_info = Field()
+
+class Ground(Item):
+    """Data structure to stadium details ()"""
+
+    ground_id = Field()
+
+    name = Field()
+    location = Field()
+
+    address = Field()
+    established = Field()
+    capacity = Field()
+    floodlights = Field()
+    home_teams = Field()
+    timezone = Field()
+    aka = Field()

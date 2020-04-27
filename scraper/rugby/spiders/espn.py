@@ -8,8 +8,8 @@ from scrapy import Request
 from scrapy.spiders import Spider
 from scrapy.exceptions import CloseSpider
 
-from rugby.items import Match, MatchStats, Team, Player, PlayerStats, GameEvent, MatchExtraStats, PlayerExtraStats
-from rugby.loaders import MatchLoader, MatchStatsLoader, TeamLoader, PlayerLoader, PlayerStatsLoader, GameEventLoader, MatchExtraStatsLoader, PlayerExtraStatsLoader
+from rugby.items import Match, MatchStats, Team, Player, PlayerStats, GameEvent, MatchExtraStats, PlayerExtraStats, Ground
+from rugby.loaders import MatchLoader, MatchStatsLoader, TeamLoader, PlayerLoader, PlayerStatsLoader, GameEventLoader, MatchExtraStatsLoader, PlayerExtraStatsLoader, GroundLoader
 
 class ESPN(Spider):
     """Main spider of the scraper, targeting http://stats.espnscrum.com"""
@@ -19,7 +19,7 @@ class ESPN(Spider):
     allowed_domains = ["stats.espnscrum.com", "espn.co.uk"]
 
     # Custom params
-    follow_pages = True
+    follow_pages = False
     categories = [1, 3]
     start_domain = "http://stats.espnscrum.com/"
     search_path = "/statsguru/rugby/stats/index.html"
@@ -146,6 +146,14 @@ class ESPN(Spider):
                 callback = self.match_page_parse,
                 meta = { "match" : match }
             )
+
+            yield response.follow(
+                url = "/statsguru/rugby/ground/{}.html".format(match["ground_id"]),
+                callback = self.ground_page_parse,
+                #meta = { "match" : match }
+            )
+
+
 
         # Get next page link and follow it if there is still data to process
         if self.follow_pages:
@@ -739,3 +747,42 @@ class ESPN(Spider):
                     for key, value in player_stats.items():
                         loader.add_value(key, value)
                     yield loader.load_item()
+
+
+    ground_lookup = {
+        'Also or formerly known as': 'aka',
+        'Established': 'established',
+        'Capacity': 'capacity',
+        'Floodlights': 'floodlights',
+        'Home team(s)': 'home_teams',
+        'Time': 'timezone'
+    }
+
+    def ground_page_parse(self, response):
+        #print('parsing ground page', response.url)
+
+        ground_loader = GroundLoader(item = Ground())
+        ground_loader.add_value('ground_id', response.url.strip('.html').split('/')[-1])
+        ground_loader.add_value('name', response.css("div.scrumPlayerName::text").get().strip())
+        ground_loader.add_value('location', response.css("div.scrumPlayerCountry::text").get().strip())
+        
+        #print(ground_loader.css('div.scrumPlayerDesc').getall())
+        #print(response.css('div.scrumPlayerDesc').getall())
+        for row in response.css('div.scrumPlayerDesc'):
+            if not row:
+                print('CONTINUING NOW')
+                continue
+
+            if row.css("i").get():
+                ground_loader.add_value('address', ", ".join([line.strip() for line in row.css("i::text").getall()]))
+            elif row.css("b::text").get().strip(): 
+                bold_text = row.css("b::text").get().strip()
+                if bold_text in self.ground_lookup:
+                    #print(row.css("::text").getall()[1])
+                    ground_loader.add_value(
+                        self.ground_lookup[bold_text],
+                        row.css("::text").getall()[1]
+                        )
+
+        #print(ground_loader.load_item(), '\n')
+        yield ground_loader.load_item()

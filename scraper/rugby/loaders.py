@@ -47,6 +47,12 @@ def parse_id(id):
     id = int(id)
     return id if id != 0 else None
 
+def parse_capacity(string):
+    return int(str(string).replace(',',''))
+
+def parse_timezone(string):
+    return regex.findall("\(.*?\)", str(string))[0].strip(')(')
+
 class MatchLoader(ItemLoader):
     default_input_processor = MapCompose(missing_values, parse_id)
     default_output_processor = TakeFirst()
@@ -95,3 +101,12 @@ class GameEventLoader(ItemLoader):
     default_output_processor = TakeFirst()
 
     action_type_in = MapCompose(lambda x: x if x in ["tries", "pens", "cons", "drops"] else None)
+
+class GroundLoader(ItemLoader):
+    default_input_processor = MapCompose(str.strip)
+    default_output_processor = TakeFirst()
+
+    capacity_in = MapCompose(parse_capacity)
+    established_in = MapCompose(int)
+    ground_id_in = MapCompose(parse_id)
+    timezone_in = MapCompose(parse_timezone)
