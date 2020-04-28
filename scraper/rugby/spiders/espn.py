@@ -19,7 +19,7 @@ class ESPN(Spider):
     allowed_domains = ["stats.espnscrum.com", "espn.co.uk"]
 
     # Custom params
-    follow_pages = False
+    follow_pages = True
     categories = [1, 3]
     start_domain = "http://stats.espnscrum.com/"
     search_path = "/statsguru/rugby/stats/index.html"
